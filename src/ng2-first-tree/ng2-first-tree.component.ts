@@ -27,7 +27,9 @@ export class Ng2FirstTreeComponent {
   // 发射节点点击事件 单击/双击/右键
   @Output() nodeClick = new EventEmitter<any>();
   @Output() nodeDragStart = new EventEmitter<any>();
+  @Output() nodeDragEnter = new EventEmitter<any>();
   @Output() nodeDragDrop = new EventEmitter<any>();
+  @Output() nodeDragEnd = new EventEmitter<any>();
   @Output() nodeDblClick = new EventEmitter<any>();
   @Output() nodeMenuClick = new EventEmitter<any>();
   // 判断是不是单击
@@ -39,7 +41,7 @@ export class Ng2FirstTreeComponent {
   /*
     
   ** 右键菜单部分
-
+ 
   */
   // 右键菜单的显示隐藏
   menuShow: boolean = false;
@@ -59,9 +61,13 @@ export class Ng2FirstTreeComponent {
       displayName: "text",                      //  节点显示字段
       displayNode: 5,                           //  显示多少个节点
       nodeHeight: 30,                           //  每个节点高度
+      nodeWidth: 200,                           //  每个节点宽度
       yScroll: "auto",                          //  垂直滚动条显示样式
+      xScroll: "auto",                          //  横向滚动条显示样式
       treeClass: "tree-container",              //  树样式
     },
+    enableclick:[],                          //  可点击层级
+    treeHeight:0,                            //  树高
     menuDatas: [],
     showicon: `icon ion-filing`,             //  子节点展开时的图标， showicon：`icon ion-filing`
     hideicon: `icon ion-folder`,             //  子节点隐藏时的图标， hideicon：`icon ion-folder`
@@ -77,7 +83,10 @@ export class Ng2FirstTreeComponent {
       lv1: false,                            // 第一级是否开启选中背景色 
     },
     foldedExpansionIsShow: false,           // 折叠展开是否显示
-
+    drag: {
+      isDrag: false,                         // 是否可拖动
+      dragTreeHeight: []                  // 可拖动的节点层级
+    }
   }
 
   constructor(private elementRef: ElementRef,
@@ -92,6 +101,7 @@ export class Ng2FirstTreeComponent {
   }
   ngOnInit(): void {
     this.newSettings = deepExtend({}, this.defaultSettings, this.settings);
+    this.showNode("");
   }
 
   ngOnChanges(changes: SimpleChange): void {
@@ -120,22 +130,6 @@ export class Ng2FirstTreeComponent {
         return;
       }
     }, 300);
-
-    // // 单击事件倒计时
-    // this.timeout = setTimeout(() => {
-    //   this.settings.nodeclick(obj);
-    //   // console.info(`单击`);
-    // }, 300);
-
-    // // 两次点击时间差
-    // const clickBuffer = this.temp - this.tempTime;
-    // // 如果双击 立即执行双击函数 并且清除单击事件倒计时
-    // if (clickBuffer && clickBuffer < 300) {
-    //   this.onToggle(obj);
-    //   clearTimeout(this.timeout);
-    // }
-
-
   }
 
 
@@ -144,6 +138,10 @@ export class Ng2FirstTreeComponent {
     this.isClick = true;
     obj.co = !obj.co;
 
+    if(this.newSettings.enableclick.length!=0
+      &&this.newSettings.enableclick.indexOf(obj.nodeDeep)<0){
+          return;
+    }
     this.nodeDblClick.emit(obj);
   }
   // 菜单上的各种自定义事件   
@@ -167,14 +165,23 @@ export class Ng2FirstTreeComponent {
     // 4. 保存当前点击的数据
     // 5. 给当前点击的数据添加背景色
     event.preventDefault();
+    //菜单是否显示
     if (this.tempMenuData == null
-      || (this.tempMenuData.treeheight == obj.treeheight
+      || (this.tempMenuData.nodeDeep == obj.nodeDeep
         && this.tempMenuData.text == obj.text)) {
       this.menuShow = !this.menuShow;
     }
     else {
       this.menuShow = true;
     }
+    //菜单根据配置显示隐藏
+    this.newSettings.menuDatas.forEach(md => {
+      if(!md.nodeDeeps||md.nodeDeeps.indexOf(obj.nodeDeep)>=0){
+        md.is_show=true;
+      }else{
+        md.is_show=false;
+      }
+    });
 
     // 右键框位置
     setTimeout(() => {
@@ -220,16 +227,29 @@ export class Ng2FirstTreeComponent {
   }
   //显示节点
   showNode(searchObj) {
+    if (this.data == undefined) {
+      return;
+    }
+    let setting=this.defaultSettings;
+    if(this.newSettings != undefined){
+      setting=this.newSettings;
+    }
     this.data.forEach(item => {
-      this.showNodeRecursive(item, searchObj);
+      this.NodeRecursive(item, searchObj,0,setting);
     });
   }
-  showNodeRecursive(obj, searchObj) {
-    let displayName = this.defaultSettings.display.displayName;
-    if (this.newSettings != undefined) {
-      displayName = this.newSettings.display.displayName;
+  //节点递归处理
+  NodeRecursive(obj, searchObj,treeHeight,setting) {
+    //初始化设置处理
+    treeHeight+=1;
+    let displayName = setting.display.displayName;
+    let dragTreeHeight = setting.drag.dragTreeHeight;
+    if(treeHeight>setting.treeHeight){
+      setting.treeHeight=treeHeight;
     }
+    //支持拼音
     obj.pinYin = this.pinyinSrv.convertPinYin(obj[displayName]);
+    //节点显示隐藏控制
     if (searchObj == ""
       || searchObj == undefined
       || obj[displayName].indexOf(searchObj) >= 0
@@ -241,10 +261,20 @@ export class Ng2FirstTreeComponent {
     } else {
       obj.IsShow = false;
     }
+    if(obj.nodeDeep==undefined){
+      obj.nodeDeep=treeHeight;
+    }
+    //是否拖动处理
+    if (dragTreeHeight.indexOf(obj.nodeDeep) >= 0) {
+      obj.isDrag = true;
+    } else {
+      obj.isDrag = false;
+    }
+    //子节点处理
     if (obj.children) {
       for (let i of obj.children) {
         i.parent = obj;
-        this.showNodeRecursive(i, searchObj);
+        this.NodeRecursive(i, searchObj,treeHeight,setting);
       }
     }
   }
@@ -255,14 +285,32 @@ export class Ng2FirstTreeComponent {
     }
   }
   // 拖动
-  dragStart(obj) {
+  dragStart(obj, ev) {
     this.dragData = obj;
-    this.nodeDragStart.emit(obj);
+    this.nodeDragStart.emit({
+      node: obj,
+      event: ev
+    });
   }
-  dragDrop(obj) {
+  dragEnter(obj, ev) {
+    this.nodeDragEnter.emit({
+      node: obj,
+      event: ev
+    });
+  }
+  dragDrop(obj, ev) {
     if (this.dragData == obj) {
       return;
     }
-    this.nodeDragDrop.emit(obj);
+    this.nodeDragDrop.emit({
+      node: obj,
+      event: ev
+    });
+  }
+  dragEnd(obj, ev) {
+    this.nodeDragEnd.emit({
+      node: obj,
+      event: ev
+    });
   }
 }

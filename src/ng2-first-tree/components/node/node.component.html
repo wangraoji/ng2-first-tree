@@ -1,15 +1,15 @@
 <ng-container *ngFor='let node of treeData'>
-    <div #div *ngIf='node.IsShow'>
-        <ul [style.padding-left.%]="node.treeheight == 1 ? 0 :(node.treeheight-1)*7" [style.background]="node.isSelect ? newSettings.selectBgc.bgc: ''">
+    <div #div [hidden]='!node.IsShow' [style.width.px]="newSettings.display.nodeWidth">
+        <ul [style.padding-left.%]="node.nodeDeep == 1 ? 0 :(node.nodeDeep-1)*7" [style.background]="node.isSelect ? newSettings.selectBgc.bgc: ''">
             <li (click)='onNodeClicked($event,node)' (contextmenu)="rightClick(node, $event,div)" (dblclick)="onNodeDblClicked($event,node)" [class.hover]="!node.isSelect"
         style="cursor: hand;"        
-        draggable="true" (dragstart)="dragstartFn(node,$event)" (dragenter)="dragenterFn()" (dragover)="dragoverFn($event)"
-        (drop)="dropFn(node)" (dragend)="dragendFn($event)" >
-                <i class="{{newSettings.hideicon}} fonticon" *ngIf="node.children&&!node.co" (click)="showTree(node,$event)"></i>
-                <i class="{{newSettings.showicon}} fonticon" *ngIf="node.children&&node.co" (click)="showTree(node,$event)"></i>
-                <i class="{{newSettings.noChildicon}} fonticon" *ngIf="!node.children&&node.co" (click)="showTree(node,$event)"></i>
-                <i class="{{newSettings.noChildicon}} fonticon" *ngIf="!node.children&&!node.co" (click)="showTree(node,$event)"></i>
-                <span [title]="getTitle(node)">{{ getText(node) }}</span>
+        [draggable]="newSettings.drag.isDrag&&node.isDrag" (dragstart)="dragstartFn(node,$event)" (dragenter)="dragenterFn(node,$event)" (dragover)="dragoverFn(node,$event)"
+        (drop)="dropFn(node,$event)" (dragend)="dragendFn(node,$event)" >
+                <i class="{{newSettings.hideicon}} fonticon" *ngIf="existsChildren(node)&&!node.co" (click)="showTree(node,$event)"></i>
+                <i class="{{newSettings.showicon}} fonticon" *ngIf="existsChildren(node)&&node.co" (click)="showTree(node,$event)"></i>
+                <i class="{{newSettings.noChildicon}} fonticon" *ngIf="!existsChildren(node)" (click)="showTree(node,$event)"></i>
+                <!-- <i class="{{newSettings.noChildicon}} fonticon" *ngIf="!node.children&&!node.co" (click)="showTree(node,$event)"></i> -->
+                <span [title]="getTitle(node)" >{{ getText(node) }}</span>
             </li>
         </ul>
     </div>

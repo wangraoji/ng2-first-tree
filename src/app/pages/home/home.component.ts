@@ -28,17 +28,23 @@ export class HomeComponent {
     
   };
   settings = {
-    displayLength:3,
+    display: {
+      displayLength: 10,                        //  节点文本显示长度
+      displayNode: 7,                           //  显示多少个节点
+    },
     menuDatas: [
-      {title: 'add', text: '新增'},
+      {title: 'add', text: '新增',nodeDeeps:[1]},
       {title: 'edit', text: '修改'},
-      {title: 'delete', text: '删除'},
+      {title: 'delete', text: '删除',nodeDeeps:[1,3,4,5]},
     ],
     filter:{
       isShow:true
     },
     // foldedExpansionIsShow: true,
-
+    drag:{
+      isDrag:true,                         // 是否可拖动
+      dragTreeHeight:[2,3]                   // 可拖动的节点层级
+    },
     selectBgc: {            // 选中行背景色
       open: true,           // 是否开启
       bgc:'#00abff',        // 配置背景色
@@ -48,13 +54,36 @@ export class HomeComponent {
  
   
   constructor(private dp: SimpleTreeService){
-      this.treedata = dp.getASimpleTree();
+    
+        let tree:any=dp.getASimpleTree();
+    for(let i=1;i<= 5;i++){
+      let new_obj = {};
+      new_obj["id"] = 8+i;
+      new_obj["text"] = (3+i)+"班";
+      new_obj["treeheight"] = 3;
+      new_obj["enableclick"] = true;
+      new_obj["co"] = false;
+      new_obj["IsShow"] = true;
+      new_obj["children"]=[];
+      for(let j=0;j<100;j++){
+        let new_child = {};
+        new_child["id"] = 8+i;j
+        new_child["text"] = (j)+"班";
+        new_child["treeheight"] = 4;
+        new_child["enableclick"] = true;
+        new_child["co"] = false;
+        new_child["IsShow"] = true;
+        new_obj["children"].push(new_child);
+      }
+      tree[0].children[0].children.push(new_obj);
+  }
+      this.treedata = tree;
       // 异步promise
       dp.getTreeData().then((tree) => {
         this.treedata1 = tree;
       });
       
-  }
+    }
   onclick(obj){
     // console.info(`node clicked`);
     // console.log(obj);

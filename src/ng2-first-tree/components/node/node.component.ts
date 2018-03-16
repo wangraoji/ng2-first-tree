@@ -23,6 +23,10 @@ export class TreeNodeComponent {
     }
     // 传过来点击者对象。
     onNodeClicked(e, obj) {
+        if(this.newSettings.enableclick.length!=0
+            &&this.newSettings.enableclick.indexOf(obj.nodeDeep)<0){
+                return;
+        }
         this.tree.onNodeClicked(e, obj);
     }
     // 双击控制tree的展示隐藏
@@ -35,45 +39,73 @@ export class TreeNodeComponent {
     }
     // 右键点击事件
     rightClick(obj, event, htmlnode) {
-        // this.tree.rightClick(obj, event, htmlnode);
+        if(this.newSettings.enableclick.length!=0
+            &&this.newSettings.enableclick.indexOf(obj.nodeDeep)<0){
+                return;
+        }
         this.rightClickFn.emit([obj, event, htmlnode]);
     }
     //子节点传出的右键事件
     ChildRightClickFn(event) {
         this.rightClickFn.emit(event);
     }
+    existsChildren(obj){
+        if(obj.children==undefined){
+            return false;
+        }
+        if(obj.children.length==0){
+            return false;
+        }
+        return true;
+    }
     getTitle(obj) {
         return obj[this.newSettings.display.displayName];
     }
     getText(obj) {
-        if (obj[this.newSettings.display.displayName].length > this.newSettings.display.displayLength) {
-            return obj[this.newSettings.display.displayName].substring(0, this.newSettings.display.displayLength - 1) + "...";
-        }
-        else {
-            return obj[this.newSettings.display.displayName];
-        }
+        // if (obj[this.newSettings.display.displayName].length > this.newSettings.display.displayLength) {
+        //     return obj[this.newSettings.display.displayName].substring(0, this.newSettings.display.displayLength - 1) + "...";
+        // }
+        // else {
+        //     return obj[this.newSettings.display.displayName];
+        // }
+        return obj[this.newSettings.display.displayName];
     }
     //拖动
     dragstartFn(obj, ev) {
         ev.dataTransfer.effectAllowed = "move";
         ev.dataTransfer.setData("text", ev.target.innerHTML);
         ev.dataTransfer.setDragImage(ev.target, 0, 0);
-        this.tree.dragStart(obj);
+        this.tree.dragStart(obj,ev);
         return true;
     }
-    dragenterFn() {
+    dragenterFn(obj,ev) {
+        if (obj.isDrag) {
+            this.tree.dragEnter(obj,ev);
+        }
         return true;
     }
-    dragoverFn(ev) {
+    dragoverFn(obj,ev) {
+        if (obj.isDrag) {
+            ev.dataTransfer.dropEffect = "all";
+            ev.dataTransfer.effectAllowed = "all";
+        }else{
+            ev.dataTransfer.dropEffect = "none";
+            ev.dataTransfer.effectAllowed = "none";
+        }
         ev.preventDefault();
         return true;
     }
-    dropFn(obj) {
-        this.tree.dragDrop(obj);
+    dropFn(obj,ev) {
+        if (obj.isDrag) {
+            this.tree.dragDrop(obj,ev);
+        }
         return false;
     }
-    dragendFn(ev) {
+    dragendFn(obj, ev) {
         ev.dataTransfer.clearData("text");
+        if (obj.isDrag) {
+            this.tree.dragEnd(obj,ev);
+        }
         return false;
     }
 }
